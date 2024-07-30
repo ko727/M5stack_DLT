@@ -5,14 +5,11 @@
 //Encoder i2C
 #define ENCODER_ADDR 0x59
 //write
-#define ENCODER_PERIMETER 0x40
 #define ENCODER_PULSE 0x50
 #define ENCODER_Z 0x70
 //read
 #define ENCODER_VALUE 0x00
 #define ENCODER_TURNS 0x60
-#define ENCODER_METER 0x10
-
 
 int set_pulse = 2048;
 int set_Z = 0;
@@ -26,6 +23,10 @@ void setup(){
   Wire.begin(M5_SDA,M5_SDL);
 
   //Encoder write
+  //perimeter
+  Wire.beginTransmission(ENCODER_ADDR);
+  Wire.write(ENCODER_PERIMETER);  
+
   //pulse
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_PULSE);

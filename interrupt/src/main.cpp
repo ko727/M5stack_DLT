@@ -1,18 +1,27 @@
-#include <Arduino.h>
+#include <M5Stack.h>
 
-// put function declarations here:
-int myFunction(int, int);
+int test;
+
+void IRAM_ATTR onRise() {
+  test++;
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  M5.begin();
+  M5.Lcd.begin();
+  Serial.begin(115200);
+  pinMode(5,INPUT_PULLDOWN);
+  attachInterrupt(5,onRise,RISING);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(ORANGE,BLACK);
+  M5.Lcd.setTextFont(4);
+  M5.Lcd.setCursor(0, 0);
+  M5.Lcd.setTextSize(1); 
+  M5.Lcd.println(test);
+  delay(10);
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}
+

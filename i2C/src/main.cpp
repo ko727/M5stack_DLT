@@ -23,10 +23,6 @@ void setup(){
   Wire.begin(M5_SDA,M5_SDL);
 
   //Encoder write
-  //perimeter
-  Wire.beginTransmission(ENCODER_ADDR);
-  Wire.write(ENCODER_PERIMETER);  
-
   //pulse
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_PULSE);

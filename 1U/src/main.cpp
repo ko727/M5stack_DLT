@@ -4,7 +4,7 @@
 
 // WiFi credentials.
 // Set password to "" for open networks.
-//#1 712, #2 702C, #3 mobile router
+// #1 712, #2 702C, #3 mobile router
 char ssid1[] = "elecom-ab5003";
 char pass1[] = "5njiuhcuth7c";
 char ssid2[] = "aterm-cfc4b1-5p";
@@ -128,8 +128,8 @@ void loop() {
     M5.Lcd.setCursor(0,150);
     M5.Lcd.println("Stop OTA, press C");
     M5.update();
-    if (M5.BtnC.isPressed()) {  // if BtnA is Pressed.  如果按键A按下
-      ArduinoOTA.end();       // Ends the ArduinoOTA service.  结束OTA服务
+    if (M5.BtnC.isPressed()) {
+      ArduinoOTA.end();
       M5.Lcd.println("OTA End!");
       OTA_flag = false;
       delay(3000);

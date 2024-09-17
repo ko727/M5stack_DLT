@@ -43,7 +43,7 @@ int value;
 #define CAN_IDaddress 0x06A
 #define CAN0_INT 15   // Set INT to pin 15
 MCP_CAN CAN0(12);     // Set CS to pin 12
-int ds;
+int ds = 2000;
 int d0,d1,d2,d3;
 
 

@@ -33,8 +33,9 @@ bool OTA_flag = false;
 #define ENCODER_VALUE 0x00
 #define ENCODER_TURNS 0x60
 
-int set_pulse = 2048;
+int set_pulse = 512;
 int set_Z = 0;
+int perimeter;
 int data_pulse[4];
 int data[4];
 int value;
@@ -43,7 +44,7 @@ int value;
 #define CAN_IDaddress 0x06A
 #define CAN0_INT 15   // Set INT to pin 15
 MCP_CAN CAN0(12);     // Set CS to pin 12
-int ds = 2000;
+int ds = 10000;
 int d0,d1,d2,d3;
 
 
@@ -52,7 +53,7 @@ void init_can(){
   if(CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK){
     // 特になにもしない    
   }else{  // 初期化に失敗した場合
-    // 特になにもしない    
+    // 特になにもしない
   }
   // MCP2515を通常モードに設定
   CAN0.setMode(MCP_NORMAL);
@@ -61,24 +62,20 @@ void init_can(){
   pinMode(CAN0_INT, INPUT);
 }
 
-void sendData(){
-  d3 = ds & 0xFF;
-  d2 = ds >> 8 & 0xFF;
-  d1 = ds >> 16 & 0xFF;
-  d0 = ds >> 24 & 0xFF;
-  Serial.println(d1);
+void sendData(int ds_){
+  d3 = ds_ & 0xFF;
+  d2 = ds_ >> 8 & 0xFF;
+  d1 = ds_ >> 16 & 0xFF;
+  d0 = ds_ >> 24 & 0xFF;
   byte data[4] = {d0, d1, d2, d3};
-
   byte sndStat = CAN0.sendMsgBuf(CAN_IDaddress, 1, 4, data);
-
-  delay(10);   // send data per 10ms
 }
 
 void IRAM_ATTR onRise1() {
-  ds = 0;
+  M5.Power.reset();
 }
 void IRAM_ATTR onRise2() {
-  ds = 0;
+  M5.Power.reset();
 }
 
 void setup() {
@@ -234,7 +231,7 @@ void loop() {
   }else{
     //Read Encoder value
     Wire.beginTransmission(ENCODER_ADDR);
-    Wire.write(ENCODER_PULSE);
+    Wire.write(ENCODER_TURNS);
     Wire.endTransmission(true);
     delay(10);
     Wire.requestFrom(ENCODER_ADDR,4);
@@ -242,11 +239,12 @@ void loop() {
       data[i] = Wire.read();
     }
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+    perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
 
     if (ds == 0) {
       delay(1000);
     }else{
-      sendData();
+      sendData(ds);
     }
     delay(10);
   }

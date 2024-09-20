@@ -44,9 +44,7 @@ int value;
 #define CAN_IDaddress 0x06A
 #define CAN0_INT 15   // Set INT to pin 15
 MCP_CAN CAN0(12);     // Set CS to pin 12
-int ds = 10000;
-int d0,d1,d2,d3;
-
+int ds;
 
 void init_can(){
   // MCP2515の初期化に成功した場合（ビットレート500kb/s ）
@@ -63,19 +61,21 @@ void init_can(){
 }
 
 void sendData(int ds_){
-  d3 = ds_ & 0xFF;
-  d2 = ds_ >> 8 & 0xFF;
-  d1 = ds_ >> 16 & 0xFF;
-  d0 = ds_ >> 24 & 0xFF;
-  byte data[4] = {d0, d1, d2, d3};
+  int d3 = ds_ & 0xFF;
+  int d2 = ds_ >> 8 & 0xFF;
+  int d1 = ds_ >> 16 & 0xFF;
+  int d0 = ds_ >> 24 & 0xFF;
+  byte data[4] = {(byte)d0, (byte)d1, (byte)d2, (byte)d3};
   byte sndStat = CAN0.sendMsgBuf(CAN_IDaddress, 1, 4, data);
 }
 
 void IRAM_ATTR onRise1() {
   M5.Power.reset();
+  delay(1000);
 }
 void IRAM_ATTR onRise2() {
   M5.Power.reset();
+  delay(1000);
 }
 
 void setup() {
@@ -209,7 +209,10 @@ void setup() {
       M5.Lcd.println("WiFi NOT Connected!!");
       OTA_flag = false;
       delay(1000);
+      M5.Power.reset();
     }
+  }else{
+
   }
 
 }
@@ -233,7 +236,7 @@ void loop() {
     Wire.beginTransmission(ENCODER_ADDR);
     Wire.write(ENCODER_TURNS);
     Wire.endTransmission(true);
-    delay(10);
+    delay(5);
     Wire.requestFrom(ENCODER_ADDR,4);
     for (int i = 0; i < 4; i++){
       data[i] = Wire.read();
@@ -241,11 +244,12 @@ void loop() {
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
     perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
 
-    if (ds == 0) {
-      delay(1000);
+    if (perimeter == 100) {
+      ds = 0;
     }else{
-      sendData(ds);
+      ds = -5000;
     }
-    delay(10);
+    sendData(ds);
+    delay(5);
   }
 }

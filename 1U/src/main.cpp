@@ -46,13 +46,13 @@ int value;
 MCP_CAN CAN0(12);     // Set CS to pin 12
 int ds;
 
+int stoper;
+
 void IRAM_ATTR onRise1() {
-  ds = 0;
-  delay(1000);
+  stoper = 2;
 }
 void IRAM_ATTR onRise2() {
-  ds = 0;
-  delay(1000);
+  stoper = 3;
 }
 
 void init_can(){
@@ -244,7 +244,7 @@ void loop() {
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
     perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
 
-    if (perimeter == 100) {
+    if (stoper > 1) {
       ds = 0;
     }else{
       ds = -5000;

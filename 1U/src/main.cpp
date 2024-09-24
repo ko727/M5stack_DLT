@@ -47,11 +47,11 @@ MCP_CAN CAN0(12);     // Set CS to pin 12
 int ds;
 
 void IRAM_ATTR onRise1() {
-  M5.Power.reset();
+  ds = 0;
   delay(1000);
 }
 void IRAM_ATTR onRise2() {
-  M5.Power.reset();
+  ds = 0;
   delay(1000);
 }
 
@@ -84,9 +84,9 @@ void setup() {
 
   //Interrupt set
   pinMode(M5_Interrupt1,INPUT_PULLDOWN);
-  attachInterrupt(M5_Interrupt1,onRise1,RISING);
+  attachInterrupt(M5_Interrupt1,onRise1,HIGH);
   pinMode(M5_Interrupt2,INPUT_PULLDOWN);
-  attachInterrupt(M5_Interrupt2,onRise2,RISING);
+  attachInterrupt(M5_Interrupt2,onRise2,HIGH);
 
   //Set CAN
   init_can();
@@ -244,7 +244,7 @@ void loop() {
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
     perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
 
-    if (perimeter < 100) {
+    if (perimeter == 100) {
       ds = 0;
     }else{
       ds = -5000;

@@ -46,6 +46,15 @@ int value;
 MCP_CAN CAN0(12);     // Set CS to pin 12
 int ds;
 
+void IRAM_ATTR onRise1() {
+  M5.Power.reset();
+  delay(1000);
+}
+void IRAM_ATTR onRise2() {
+  M5.Power.reset();
+  delay(1000);
+}
+
 void init_can(){
   // MCP2515の初期化に成功した場合（ビットレート500kb/s ）
   if(CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK){
@@ -67,15 +76,6 @@ void sendData(int ds_){
   int d0 = ds_ >> 24 & 0xFF;
   byte data[4] = {(byte)d0, (byte)d1, (byte)d2, (byte)d3};
   byte sndStat = CAN0.sendMsgBuf(CAN_IDaddress, 1, 4, data);
-}
-
-void IRAM_ATTR onRise1() {
-  M5.Power.reset();
-  delay(1000);
-}
-void IRAM_ATTR onRise2() {
-  M5.Power.reset();
-  delay(1000);
 }
 
 void setup() {
@@ -244,7 +244,7 @@ void loop() {
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
     perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
 
-    if (perimeter == 100) {
+    if (perimeter < 100) {
       ds = 0;
     }else{
       ds = -5000;

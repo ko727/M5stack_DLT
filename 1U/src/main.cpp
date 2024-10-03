@@ -35,10 +35,12 @@ bool OTA_flag = false;
 
 int set_pulse = 512;
 int set_Z = 0;
-int perimeter;
+volatile float perimeter;
 int data_pulse[4];
 int data[4];
 int value;
+int value_1st;
+int set_position_mode;
 
 // CAN setup
 #define CAN_IDaddress 0x06A
@@ -46,7 +48,7 @@ int value;
 MCP_CAN CAN0(12);     // Set CS to pin 12
 int ds;
 
-int stoper;
+volatile int stoper;
 
 void IRAM_ATTR onRise1() {
   stoper = 2;
@@ -77,6 +79,7 @@ void sendData(int ds_){
   byte data[4] = {(byte)d0, (byte)d1, (byte)d2, (byte)d3};
   byte sndStat = CAN0.sendMsgBuf(CAN_IDaddress, 1, 4, data);
 }
+
 
 void setup() {
   M5.begin();
@@ -111,11 +114,22 @@ void setup() {
   Wire.write(ENCODER_Z);
   Wire.write(set_Z);
   Wire.endTransmission(true);
+  //Read encoder value
+  Wire.beginTransmission(ENCODER_ADDR);
+  Wire.write(ENCODER_VALUE);
+  Wire.endTransmission(true);
+  delay(5);
+  Wire.requestFrom(ENCODER_ADDR,4);
+  for (int i = 0; i < 4; i++){
+    data[i] = Wire.read();
+  }
+  value_1st = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
 
   //WiFi OTA
   M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(0,0);
-  M5.Lcd.printf("Use OTA, press A");
+  M5.Lcd.println("Use OTA, press A");
+  M5.Lcd.println("Set position, press B");
   while(wifi_cnt < 20){
     wifi_cnt++;
     delay(500);
@@ -123,8 +137,15 @@ void setup() {
     M5.update();
     if (M5.BtnA.isPressed()){
       OTA_flag = true;
-      M5.Lcd.setCursor(0,30);
+      M5.Lcd.setCursor(0,60);
       M5.Lcd.printf("OTA mode");
+      delay(500);
+      break;
+    }
+    if (M5.BtnB.isPressed()){
+      set_position_mode = 1;
+      M5.Lcd.setCursor(0,60);
+      M5.Lcd.printf("Set position mode");
       delay(500);
       break;
     }
@@ -232,9 +253,14 @@ void loop() {
     }
     delay(50);
   }else{
+    /*if(set_position_mode == 0){
+      if(stoper == 2){
+
+      }
+    }*/
     //Read Encoder value
     Wire.beginTransmission(ENCODER_ADDR);
-    Wire.write(ENCODER_TURNS);
+    Wire.write(ENCODER_VALUE);
     Wire.endTransmission(true);
     delay(5);
     Wire.requestFrom(ENCODER_ADDR,4);
@@ -242,14 +268,15 @@ void loop() {
       data[i] = Wire.read();
     }
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-    perimeter = value * (50 + 4) * 3.14 / ((60/19)*(60/19));
+    perimeter = (value - value_1st) * (50 + 4) * 3.14 / ((60/19)*(60/19)) / 512;
 
-    if (stoper > 1) {
-      ds = 0;
-    }else{
+    if (stoper == 2) {
+      ds = 5000;
+    }if(stoper == 3){
       ds = -5000;
     }
     sendData(ds);
     delay(5);
   }
+
 }

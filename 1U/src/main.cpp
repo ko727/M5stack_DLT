@@ -38,16 +38,17 @@ int set_Z = 0;
 volatile float perimeter;
 int data_pulse[4];
 int data[4];
-int value;
+volatile int value;
 int value_1st;
 int set_position_mode;
 
 // CAN setup
-#define CAN_IDaddress 0x06A
+#define CAN_IDaddress 0x019
 #define CAN0_INT 15   // Set INT to pin 15
 MCP_CAN CAN0(12);     // Set CS to pin 12
 int ds;
 
+// Limit switch 割り込み関数
 volatile int stoper;
 
 void IRAM_ATTR onRise1() {
@@ -268,12 +269,12 @@ void loop() {
       data[i] = Wire.read();
     }
     value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-    perimeter = (value - value_1st) * (50 + 4) * 3.14 / ((60/19)*(60/19)) / 512;
+    perimeter = (value - value_1st) * (50 + 2) * 3.14 / ((60/19)*(60/19)) / 512;
 
-    if (stoper == 2) {
-      ds = 5000;
+    if (stoper == 0) {
+      ds = 10000;
     }if(stoper == 3){
-      ds = -5000;
+      ds = -10000;
     }
     sendData(ds);
     delay(5);

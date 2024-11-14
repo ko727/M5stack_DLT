@@ -1,15 +1,8 @@
 #include <M5Stack.h>
 #include <mcp_can.h>
-#include <Adafruit_NeoPixel.h>
 
-#define M5STACK_FIRE_NEO_NUM_LEDS 10
-#define M5STACK_FIRE_NEO_DATA_PIN 15
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(
-    M5STACK_FIRE_NEO_NUM_LEDS, M5STACK_FIRE_NEO_DATA_PIN, NEO_GRB + NEO_KHZ800);
-
-#define CAN0_INT 15   // Set INT to pin 15
-MCP_CAN CAN0(12);     // Set CS to pin 12
+#define CAN0_INT 15   // Set INT to pin 2
+MCP_CAN CAN0(12);     // Set CS to pin 10
 
 // 受信したいCAN ID個数を設定する（ボタンを押す毎にスクロールする画面数になる）
 #define BUF_NUM 50
@@ -25,9 +18,6 @@ class CANData{
 static CANData rcv_data[BUF_NUM]; 
 static int display_number = 0;
 
-int ds;
-int d0,d1,d2,d3;
-
 // CANモジュールの初期化
 void init_can(){
   
@@ -36,7 +26,7 @@ void init_can(){
   M5.Lcd.fillScreen(0x0000);
 
   // MCP2515の初期化に成功した場合（ビットレート500kb/s ）
-  if(CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK){
+  if(CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK){
     // 特になにもしない    
   }else{  // 初期化に失敗した場合
     // 特になにもしない    
@@ -47,24 +37,6 @@ void init_can(){
   // CAN0_INTを入力ピンに設定（受信用）
   pinMode(CAN0_INT, INPUT);
 
-}
-
-//CAN通信データを送信
-void sendData(){
-  d3 = ds & 0xFF;
-  d2 = ds >> 8 & 0xFF;
-  d1 = ds >> 16 & 0xFF;
-  d0 = ds >> 24 & 0xFF;
-  Serial.println(d1);
-  byte data[4] = {d0, d1, d2, d3};
-
-  byte sndStat = CAN0.sendMsgBuf(0x06A, 1, 4, data);
-  if(sndStat == CAN_OK){
-    Serial.println("Message Sent Successfully!");
-  } else {
-    Serial.println("Error Sending Message...");
-  }
-  delay(10);   // send data per 100ms
 }
 
 // CAN通信データを受信
@@ -147,40 +119,7 @@ void display_data(){
 
 }
 
-void LED_colorbar(){
-  pixels.clear();
-  if(ds >= 10000){
-    pixels.setPixelColor(0, pixels.Color(7, 7, 7));
-  }else if(ds >= 20000){
-    pixels.setPixelColor(0, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(1, pixels.Color(7, 7, 7));
-  }else if(ds >= 30000){
-    pixels.setPixelColor(0, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(1, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(2, pixels.Color(7, 7, 7));
-  }else if(ds >= 40000){
-    pixels.setPixelColor(0, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(1, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(2, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(3, pixels.Color(7, 7, 7));
-  }else if(ds >= 50000){
-    pixels.setPixelColor(0, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(1, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(2, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(3, pixels.Color(7, 7, 7));
-    pixels.setPixelColor(4, pixels.Color(7, 7, 7));
-  }else{
-    pixels.setPixelColor(5, pixels.Color(10, 10, 10));
-    pixels.setPixelColor(6, pixels.Color(10, 10, 10));
-    pixels.setPixelColor(7, pixels.Color(10, 10, 10));
-    pixels.setPixelColor(8, pixels.Color(10, 10, 10));
-    pixels.setPixelColor(9, pixels.Color(10, 10, 10));
-  }
-  pixels.show();
-}
-
 void setup() {
-  pixels.begin();
 
   M5.begin();
   Serial.begin(115200);
@@ -201,17 +140,10 @@ void setup() {
 }
 
 void loop() {
-  if(M5.BtnB.wasPressed()){
-    ds = ds + 1000;
-  }
-  sendData();
 
   receiveData();
   
   display_data();
-
-  LED_colorbar();
-   
+    
   M5.update();
-  
 }

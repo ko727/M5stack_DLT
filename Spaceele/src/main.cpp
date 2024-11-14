@@ -6,8 +6,8 @@
 // WiFi credentials.
 // Set password to "" for open networks.
 // #1 712, #2 702C, #3 mobile router
-char ssid1[] = "elecom-ab5003";
-char pass1[] = "5njiuhcuth7c";
+char ssid1[] = "Buffalo-G-9AC8";
+char pass1[] = "rd66td4bde67s";
 char ssid2[] = "aterm-cfc4b1-5p";
 char pass2[] = "23b2c159372b8";
 char ssid3[] = "Galaxy_5GMW_3739";
@@ -43,9 +43,10 @@ int value_1st;
 int set_position_mode;
 
 // CAN setup
-#define CAN_IDaddress 0x019
-#define CAN0_INT 15   // Set INT to pin 15
-MCP_CAN CAN0(12);     // Set CS to pin 12
+#define CAN_vesc_IDaddress 0x019
+#define CAN_dji_IDaddress 0x200
+#define CAN0_INT 15
+MCP_CAN CAN0(12);
 int ds;
 
 // Limit switch 割り込み関数
@@ -59,26 +60,27 @@ void IRAM_ATTR onRise2() {
 }
 
 void init_can(){
-  // MCP2515の初期化に成功した場合（ビットレート500kb/s ）
-  if(CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK){
-    // 特になにもしない    
-  }else{  // 初期化に失敗した場合
-    // 特になにもしない
+  if(CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK){  
+  }else{ 
   }
-  // MCP2515を通常モードに設定
   CAN0.setMode(MCP_NORMAL);
-  
-  // CAN0_INTを入力ピンに設定（受信用）
   pinMode(CAN0_INT, INPUT);
 }
 
-void sendData(int ds_){
+void sendData_dji(int ds_){
+  int d1 = ds_ & 0xFF;
+  int d0 = ds_ >> 8 & 0xFF;
+  byte data[8] = {(byte)d0, (byte)d1, 0,0,0,0,0,0};
+  byte sndStat = CAN0.sendMsgBuf(CAN_dji_IDaddress, 0, 8, data);
+}
+
+void sendData_vesc(int ds_){
   int d3 = ds_ & 0xFF;
   int d2 = ds_ >> 8 & 0xFF;
   int d1 = ds_ >> 16 & 0xFF;
   int d0 = ds_ >> 24 & 0xFF;
   byte data[4] = {(byte)d0, (byte)d1, (byte)d2, (byte)d3};
-  byte sndStat = CAN0.sendMsgBuf(CAN_IDaddress, 1, 4, data);
+  byte sndStat = CAN0.sendMsgBuf(CAN_vesc_IDaddress, 1, 4, data);
 }
 
 
@@ -254,30 +256,9 @@ void loop() {
     }
     delay(50);
   }else{
-    /*if(set_position_mode == 0){
-      if(stoper == 2){
-
-      }
-    }*/
-    //Read Encoder value
-    Wire.beginTransmission(ENCODER_ADDR);
-    Wire.write(ENCODER_VALUE);
-    Wire.endTransmission(true);
-    delay(5);
-    Wire.requestFrom(ENCODER_ADDR,4);
-    for (int i = 0; i < 4; i++){
-      data[i] = Wire.read();
-    }
-    value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-    perimeter = (value - value_1st) * (50 + 2) * 3.14 / ((60/19)*(60/19)) / 512;
-
-    if (stoper == 0) {
-      ds = 10000;
-    }if(stoper == 3){
-      ds = -10000;
-    }
-    sendData(ds);
-    delay(5);
+    sendData_dji(2000);
+    sendData_vesc(3000);
+    delay(1);
   }
 
 }

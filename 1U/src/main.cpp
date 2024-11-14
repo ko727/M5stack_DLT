@@ -6,8 +6,8 @@
 // WiFi credentials.
 // Set password to "" for open networks.
 // #1 712, #2 702C, #3 mobile router
-char ssid1[] = "elecom-ab5003";
-char pass1[] = "5njiuhcuth7c";
+char ssid1[] = "Buffalo-G-9AC8";
+char pass1[] = "rd66td4bde67s";
 char ssid2[] = "aterm-cfc4b1-5p";
 char pass2[] = "23b2c159372b8";
 char ssid3[] = "Galaxy_5GMW_3739";

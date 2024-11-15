@@ -257,7 +257,7 @@ void loop() {
     delay(50);
   }else{
     sendData_dji(2000);
-    sendData_vesc(3000);
+    sendData_vesc(10000);
     delay(1);
   }
 

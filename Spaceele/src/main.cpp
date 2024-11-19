@@ -3,6 +3,9 @@
 #include <WiFi.h>
 #include <mcp_can.h>
 
+int mode_num = 0;
+long timer,tm,tm_;
+
 // WiFi credentials.
 // Set password to "" for open networks.
 // #1 712, #2 702C, #3 mobile router
@@ -53,10 +56,10 @@ int ds;
 volatile int stoper;
 
 void IRAM_ATTR onRise1() {
-  stoper = 2;
+  stoper = 1;
 }
 void IRAM_ATTR onRise2() {
-  stoper = 3;
+  stoper = 2;
 }
 
 void init_can(){
@@ -68,6 +71,7 @@ void init_can(){
 }
 
 void sendData_dji(int ds_){
+  //-10000~10000[mA]
   int d1 = ds_ & 0xFF;
   int d0 = ds_ >> 8 & 0xFF;
   byte data[8] = {(byte)d0, (byte)d1, 0,0,0,0,0,0};
@@ -75,6 +79,7 @@ void sendData_dji(int ds_){
 }
 
 void sendData_vesc(int ds_){
+  //-10000~10000[%/100]
   int d3 = ds_ & 0xFF;
   int d2 = ds_ >> 8 & 0xFF;
   int d1 = ds_ >> 16 & 0xFF;
@@ -87,6 +92,7 @@ void sendData_vesc(int ds_){
 void setup() {
   M5.begin();
   M5.Power.begin();
+  mode_num = 10;
 
   //Interrupt set
   pinMode(M5_Interrupt1,INPUT_PULLDOWN);
@@ -212,6 +218,7 @@ void setup() {
     }
     M5.Lcd.clear();
     if (WiFi.status() == WL_CONNECTED){
+      mode_num = 100;
       M5.Lcd.setCursor(0,0);
       M5.Lcd.println("WiFi Connected!!");
       M5.Lcd.print("SSID: ");
@@ -236,29 +243,66 @@ void setup() {
       M5.Power.reset();
     }
   }else{
-
   }
-
 }
 
 void loop() {
-  if(OTA_flag == true){
-    ArduinoOTA.handle();
-    M5.Lcd.setCursor(0,150);
-    M5.Lcd.println("Stop OTA, press C");
-    M5.update();
-    if (M5.BtnC.isPressed()) {
-      ArduinoOTA.end();
-      M5.Lcd.println("OTA End!");
-      OTA_flag = false;
-      delay(3000);
-      M5.Lcd.clear();
-    }
-    delay(50);
-  }else{
-    sendData_dji(2000);
-    sendData_vesc(10000);
-    delay(1);
+  delay(1);
+  tm_ = millis();
+  timer = tm_ - tm;
+  if(stoper == 1){
+    mode_num = 10;
+    tm = tm_ - 40000;
+    stoper = 0;
+  }else if(stoper == 2){
+    mode_num = 10;
+  }
+  else if(timer > 10000 && timer < 30000){//up
+    mode_num = 20;
+  }else if(timer > 30000 && timer < 40000){//stop
+    mode_num = 10;
+  }else if(timer > 40000 && timer < 60000){//down
+    mode_num = 30;
   }
 
+  switch (mode_num){
+  case 0:
+    tm = millis();
+    break;
+  case 10:
+    sendData_dji(-2000);
+    sendData_vesc(0);
+    break;
+  
+  case 20:
+    sendData_dji(2000);
+    sendData_vesc(5000);
+    break;
+
+  case 30:
+    sendData_dji(2000);
+    sendData_vesc(-5000);
+    break;
+
+  case 100://OTA program
+    if(OTA_flag == true){
+      ArduinoOTA.handle();
+      M5.Lcd.setCursor(0,150);
+      M5.Lcd.println("Stop OTA, press C");
+      M5.update();
+      if (M5.BtnC.isPressed()) {
+        ArduinoOTA.end();
+        M5.Lcd.println("OTA End!");
+        OTA_flag = false;
+        delay(3000);
+        M5.Lcd.clear();
+      }
+      delay(50);
+    }else{
+    }
+    break;
+    
+  default:
+    break;
+  }
 }

@@ -248,13 +248,13 @@ void setup() {
 
 void loop() {
   delay(1);
-  /*
+  mode_num = 20;
   tm_ = millis();
   timer = tm_ - tm;
+  /*
   if(stoper == 1){
     mode_num = 10;
-    tm = tm_ - 40000;
-    stoper = 0;
+
   }else if(stoper == 2){
     mode_num = 10;
   }
@@ -265,8 +265,7 @@ void loop() {
   }else if(timer > 40000 && timer < 60000){//down
     mode_num = 30;
   }
-  */
-
+*/
   switch (mode_num){
   case 0:
     tm = millis();
@@ -278,13 +277,16 @@ void loop() {
   
   case 20:
     sendData_dji(2000);
-    sendData_vesc(5000);
+    sendData_vesc(-5000);
     break;
 
   case 30:
     sendData_dji(2000);
-    sendData_vesc(-5000);
+    sendData_vesc(5000);
     break;
+  
+  case 40: //debug break free
+    sendData_dji(2000);
 
   case 100://OTA program
     if(OTA_flag == true){

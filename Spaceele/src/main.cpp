@@ -248,7 +248,7 @@ void setup() {
 
 void loop() {
   delay(1);
-  tm_ = millis();t
+  tm_ = millis();
   timer = tm_ - tm;
   if(stoper == 1){
     mode_num = 10;

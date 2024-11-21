@@ -46,7 +46,7 @@ int value_1st;
 int set_position_mode;
 
 // CAN setup
-#define CAN_vesc_IDaddress 0x019
+#define CAN_vesc_IDaddress 0x022 //VESC ID = 34
 #define CAN_dji_IDaddress 0x200
 #define CAN0_INT 15
 MCP_CAN CAN0(12);
@@ -248,6 +248,7 @@ void setup() {
 
 void loop() {
   delay(1);
+  /*
   tm_ = millis();
   timer = tm_ - tm;
   if(stoper == 1){
@@ -264,6 +265,7 @@ void loop() {
   }else if(timer > 40000 && timer < 60000){//down
     mode_num = 30;
   }
+  */
 
   switch (mode_num){
   case 0:

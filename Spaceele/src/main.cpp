@@ -74,7 +74,7 @@ void sendData_dji(int ds_){
   //-10000~10000[mA]
   int d1 = ds_ & 0xFF;
   int d0 = ds_ >> 8 & 0xFF;
-  byte data[8] = {(byte)d0, (byte)d1, 0,0,0,0,0,0};
+  byte data[8] = {(byte)d0, (byte)d1, (byte)d0, (byte)d1, (byte)d0, (byte)d1, (byte)d0, (byte)d1};
   byte sndStat = CAN0.sendMsgBuf(CAN_dji_IDaddress, 0, 8, data);
 }
 
@@ -248,10 +248,9 @@ void setup() {
 
 void loop() {
   delay(1);
-  mode_num = 20;
   tm_ = millis();
   timer = tm_ - tm;
-  /*
+
   if(stoper == 1){
     mode_num = 10;
 
@@ -265,7 +264,7 @@ void loop() {
   }else if(timer > 40000 && timer < 60000){//down
     mode_num = 30;
   }
-*/
+
   switch (mode_num){
   case 0:
     tm = millis();

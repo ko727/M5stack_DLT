@@ -38,15 +38,19 @@ bool OTA_flag = false;
 
 int set_pulse = 512;
 int set_Z = 0;
-volatile float perimeter;
+float perimeter;
 int data_pulse[4];
 int data[4];
-volatile int value;
+int value;
 int value_1st;
 int set_position_mode;
+#define DIAMETAR 30
+#define ENCODER_P 512
 
 // CAN setup
-#define CAN_vesc_IDaddress 0x022 //VESC ID = 34
+#define CAN_vesc_IDaddress_A 0x051 //VESC ID = 81(A) 0x051
+#define CAN_vesc_IDaddress_B 0x022 //VESC ID = 34(B) 0x022
+#define CAN_vesc_IDaddress_C 0x074 //VESC ID = 116(C) 0x074
 #define CAN_dji_IDaddress 0x200
 #define CAN0_INT 15
 MCP_CAN CAN0(12);
@@ -78,14 +82,14 @@ void sendData_dji(int ds_){
   byte sndStat = CAN0.sendMsgBuf(CAN_dji_IDaddress, 0, 8, data);
 }
 
-void sendData_vesc(int ds_){
+void sendData_vesc(int ds_, int id){
   //-10000~10000[%/100]
   int d3 = ds_ & 0xFF;
   int d2 = ds_ >> 8 & 0xFF;
   int d1 = ds_ >> 16 & 0xFF;
   int d0 = ds_ >> 24 & 0xFF;
   byte data[4] = {(byte)d0, (byte)d1, (byte)d2, (byte)d3};
-  byte sndStat = CAN0.sendMsgBuf(CAN_vesc_IDaddress, 1, 4, data);
+  byte sndStat = CAN0.sendMsgBuf(id, 1, 4, data);
 }
 
 
@@ -243,13 +247,36 @@ void setup() {
       M5.Power.reset();
     }
   }else{
+    tm = millis();
   }
 }
 
 void loop() {
-  delay(1);
+  delay(5);
   tm_ = millis();
   timer = tm_ - tm;
+
+/*
+//Read Encoder value
+  Wire.beginTransmission(ENCODER_ADDR);
+  Wire.write(ENCODER_VALUE);
+  Wire.endTransmission(true);
+  delay(5);
+  Wire.requestFrom(ENCODER_ADDR,4);
+  for (int i = 0; i < 4; i++){
+    data[i] = Wire.read();
+  }
+  value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+  perimeter = (value - value_1st) * DIAMETAR * 3.14 / ENCODER_P;
+
+  if(stoper == 1){
+    mode_num = 10;
+  }else if(stoper == 2){
+    mode_num = 10;
+  }else if(perimeter > 5000){
+    mode_num = 10;
+  }
+*/
 
   if(stoper == 1){
     mode_num = 10;
@@ -257,35 +284,60 @@ void loop() {
   }else if(stoper == 2){
     mode_num = 10;
   }
-  else if(timer > 10000 && timer < 30000){//up
+  else if(timer > 10000 && timer < 12000){//up
     mode_num = 20;
-  }else if(timer > 30000 && timer < 40000){//stop
+  }else if(timer > 12000 && timer < 20000){//stop
     mode_num = 10;
-  }else if(timer > 40000 && timer < 60000){//down
-    mode_num = 30;
+  }else if(timer > 20000 && timer < 80000){//down
+    mode_num = 50;
   }
 
   switch (mode_num){
   case 0:
     tm = millis();
     break;
-  case 10:
+  case 10: //stop
     sendData_dji(-2000);
-    sendData_vesc(0);
+    sendData_vesc(0,CAN_vesc_IDaddress_A);
+    sendData_vesc(0,CAN_vesc_IDaddress_B);
+    sendData_vesc(0,CAN_vesc_IDaddress_C);
     break;
   
-  case 20:
+  case 20: //up
     sendData_dji(2000);
-    sendData_vesc(-5000);
+    delay(1);
+    sendData_vesc(-10000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-10000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-10000,CAN_vesc_IDaddress_C);
     break;
 
-  case 30:
+  case 30: //down
     sendData_dji(2000);
-    sendData_vesc(5000);
+    sendData_vesc(0,CAN_vesc_IDaddress_A);
+    sendData_vesc(0,CAN_vesc_IDaddress_B);
+    sendData_vesc(0,CAN_vesc_IDaddress_C);
     break;
   
   case 40: //debug break free
     sendData_dji(2000);
+    sendData_vesc(0,CAN_vesc_IDaddress_A);
+    sendData_vesc(0,CAN_vesc_IDaddress_B);
+    sendData_vesc(0,CAN_vesc_IDaddress_C);
+    break;
+  
+  case 50:
+    sendData_dji(2000);
+    sendData_vesc(0,CAN_vesc_IDaddress_A);
+    sendData_vesc(0,CAN_vesc_IDaddress_B);
+    sendData_vesc(0,CAN_vesc_IDaddress_C);
+    delay(1000);
+    sendData_dji(-2000);
+    sendData_vesc(0,CAN_vesc_IDaddress_A);
+    sendData_vesc(0,CAN_vesc_IDaddress_B);
+    sendData_vesc(0,CAN_vesc_IDaddress_C);
+    delay(500);
+    break;
+
 
   case 100://OTA program
     if(OTA_flag == true){

@@ -4,7 +4,7 @@
 #include <mcp_can.h>
 
 int mode_num = 0;
-int ts_time;
+float ts_time;
 int run_mode; //10(Virtical),20(Incline)
 
 // WiFi credentials.
@@ -22,10 +22,19 @@ int wifi_num = 1;
 bool OTA_flag = false;
 
 // Limit Switch setup
-#define M5_Limitsw1 2
-#define M5_Limitsw2 5
-long sw_time;
-int sw_status; //10(TOP),20(BOTTOM)
+#define M5_Limitsw1 5
+#define M5_Limitsw2 2
+float sw_time;
+
+// Limit switch 割り込み関数
+void IRAM_ATTR onRise1() {
+  mode_num = 11;
+  sw_time = millis();
+}
+void IRAM_ATTR onRise2() {
+  mode_num = 10;
+  sw_time = millis();
+}
 
 // I2C Encoder
 #define M5_SDA 21
@@ -94,6 +103,9 @@ void setup() {
   //Limit Switch
   pinMode(M5_Limitsw1, INPUT_PULLDOWN);
   pinMode(M5_Limitsw2, INPUT_PULLDOWN);
+  //Interrupt set
+  attachInterrupt(M5_Limitsw1,onRise1,RISING);
+  attachInterrupt(M5_Limitsw2,onRise2,RISING);
 
   //Set CAN
   init_can();
@@ -163,19 +175,24 @@ void setup() {
     M5.Lcd.setCursor(0,0);
     M5.Lcd.println("Press A, UP --- Press B, DOWN");
     M5.Lcd.println("If you set target, Press C");
-    M5.Lcd.setTextSize(4);
+    M5.Lcd.setTextSize(2);
     M5.Lcd.setCursor(0,100);
     M5.Lcd.print("Target: ");
-    while(true){
-      if(M5.BtnA.wasPressed()){
-        set_position = set_position + 10000;
-      }else if(M5.BtnB.wasPressed()){
+    while(1){
+      M5.update();
+      M5.Lcd.fillRect(100,90,80,20, BLACK);
+      if(M5.BtnA.isPressed()){
+        set_position = set_position + 1000;
+      }else if(M5.BtnB.isPressed()){
         set_position = set_position - 1000;
-      }else if(m5.BtnC.wasPressed()){
+      }else if(M5.BtnC.isPressed()){
         break;
       }
+      M5.Lcd.setCursor(90,100);
       M5.Lcd.print(set_position/1000);
+      M5.Lcd.setCursor(180,100);
       M5.Lcd.print("[m]");
+      delay(100);
     }
     M5.Lcd.clear();
 
@@ -186,12 +203,16 @@ void setup() {
     M5.Lcd.print("[m]");
 
     M5.Lcd.setCursor(0,80);
-    M5.Lcd.println("Press A, Virtical --- Press C, Incline");
-    while (true){
-      if(M5.BtnA.wasPressed()){
+    M5.Lcd.println("Press A, Virtical");
+    M5.Lcd.println("Press C, Incline");
+    delay(100);
+    while (1){
+      M5.update();
+      delay(100);
+      if(M5.BtnA.isPressed()){
         run_mode = 10;
         break;
-      }else if(M5.BtnC.wasPressed()){
+      }else if(M5.BtnC.isPressed()){
         run_mode = 20;
         break;
       }
@@ -288,6 +309,7 @@ void setup() {
 }
 
 void loop() {
+  M5.update();
 //Read Encoder value
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_VALUE);
@@ -299,35 +321,6 @@ void loop() {
   }
   value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
   perimeter = (value - value_1st) * DIAMETAR * 3.14 / ENCODER_P;
-
-//Limit switch mode
-  if(digitalRead(M5_Limitsw1) == 1){
-    sw_time = millis();
-    sw_status = 10;
-  }else if(digitalRead(M5_Limitsw2) == 1){
-    sw_time = millis();
-    sw_status = 20;
-  }
-  if(sw_status = 10){
-    if(digitalRead(M5_Limitsw1) == 1){
-      if(millis() - sw_time > 50){
-        mode_num = 11;
-        sw_time = millis();
-      }
-    }else{
-      sw_status = 0;
-    }
-  }else if(sw_status = 20){
-    if(digitalRead(M5_Limitsw2) == 1){
-      if(millis() - sw_time > 50){
-        mode_num = 10;
-      }
-    }else{
-      sw_status = 0;
-    }
-  }
-
-
 
   switch (mode_num){
 

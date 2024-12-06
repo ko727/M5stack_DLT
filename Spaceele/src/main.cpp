@@ -24,16 +24,15 @@ bool OTA_flag = false;
 // Limit Switch setup
 #define M5_Limitsw1 5
 #define M5_Limitsw2 2
-float sw_time;
 
 // Limit switch 割り込み関数
 void IRAM_ATTR onRise1() {
   mode_num = 11;
-  sw_time = millis();
+  ts_time = millis();
 }
 void IRAM_ATTR onRise2() {
   mode_num = 10;
-  sw_time = millis();
+  ts_time = millis();
 }
 
 // I2C Encoder
@@ -115,7 +114,6 @@ void setup() {
   //pulse
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_PULSE);
-  set_pulse = set_pulse*2;
   data_pulse[0] = set_pulse & 0xFF;
   data_pulse[1] = (set_pulse >> 8) & 0xFF;
   data_pulse[2] = (set_pulse >> 16) & 0xFF;
@@ -320,7 +318,7 @@ void loop() {
     data[i] = Wire.read();
   }
   value = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-  perimeter = (value - value_1st) * DIAMETAR * 3.14 / ENCODER_P;
+  perimeter = (value - value_1st) * DIAMETAR * 3.14 / (set_pulse*4);
 
   switch (mode_num){
 
@@ -331,12 +329,17 @@ void loop() {
     sendData_vesc(0,CAN_vesc_IDaddress_C);   
     break;
 
-  case 11: //Limit Switch Up side (STOP --> DOWN)
+  case 11: //Limit Switch Up side (STOP --> DOWN) 11-->12
+    ts_time = millis();
+    mode_num = 12;
+    break;
+
+  case 12: //Limit Switch Up side (STOP --> DOWN)
     sendData_dji(-2000);
     sendData_vesc(0,CAN_vesc_IDaddress_A);
     sendData_vesc(0,CAN_vesc_IDaddress_B);
     sendData_vesc(0,CAN_vesc_IDaddress_C);
-    if (millis() - sw_time > 5000){
+    if (millis() - ts_time > 5000){
       if(run_mode == 10){
         mode_num = 30;
       }else if(run_mode == 20){

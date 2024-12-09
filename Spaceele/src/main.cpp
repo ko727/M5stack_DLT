@@ -47,7 +47,7 @@ void IRAM_ATTR onRise2() {
 #define ENCODER_VALUE 0x00
 #define ENCODER_TURNS 0x60
 
-int set_pulse = 512;
+int set_pulse = 256;
 int set_Z = 0;
 float perimeter;
 int data_pulse[4];
@@ -57,7 +57,6 @@ int value_1st;
 int set_position_mode;
 float set_position, set_position_;
 #define DIAMETAR 30
-#define ENCODER_P 512
 
 // CAN setup
 #define CAN_vesc_IDaddress_A 0x051 //VESC ID = 81(A) 0x051
@@ -307,7 +306,6 @@ void setup() {
 }
 
 void loop() {
-  M5.update();
 //Read Encoder value
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_VALUE);
@@ -323,6 +321,7 @@ void loop() {
   switch (mode_num){
 
   case 10: //Limit Switch Bottom side(STOP Unlimited)
+    M5.update();
     sendData_dji(-2000);
     sendData_vesc(0,CAN_vesc_IDaddress_A);
     sendData_vesc(0,CAN_vesc_IDaddress_B);
@@ -332,6 +331,7 @@ void loop() {
   case 11: //Limit Switch Up side (STOP --> DOWN) 11-->12
     ts_time = millis();
     mode_num = 12;
+    M5.update();
     break;
 
   case 12: //Limit Switch Up side (STOP --> DOWN)

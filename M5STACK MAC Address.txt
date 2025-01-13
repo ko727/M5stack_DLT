@@ -1,0 +1,10 @@
+M5STACK MAC Address
+
+GoPro_control(Conect PC)
+2C:BC:BB:81:F8:60
+
+SLT_load
+2C:BC:BB:82:01:D8
+
+Trigger_logger
+2C:BC:BB:81:F8:FC

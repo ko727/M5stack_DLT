@@ -4,26 +4,27 @@
 #include <mcp_can.h>
 
 int mode_num = 0;
-float ts_time;
+float ts_time, ts_time_;
 int run_mode; //10(Virtical),20(Incline)
 
 // WiFi credentials.
 // Set password to "" for open networks.
 // #1 712, #2 702C, #3 mobile router
-char ssid1[] = "Buffalo-G-9AC8";
-char pass1[] = "rd66td4bde67s";
+char ssid1[] = "FS030W_P473654";
+char pass1[] = "37052573";
 char ssid2[] = "aterm-cfc4b1-5p";
 char pass2[] = "23b2c159372b8";
-char ssid3[] = "Galaxy_5GMW_3739";
-char pass3[] = "vrcl3968";
+char ssid3[] = "Buffalo-G-9AC8";
+char pass3[] = "rd66td4bde67s";
 
 int wifi_cnt;
 int wifi_num = 1;
 bool OTA_flag = false;
 
 // Limit Switch setup
-#define M5_Limitsw1 5
-#define M5_Limitsw2 2
+#define M5_Limitsw1 5 //Top
+#define M5_Limitsw2 2 //Bottom
+int sw_mode = 0;
 
 // Limit switch 割り込み関数
 void IRAM_ATTR onRise1() {
@@ -102,8 +103,8 @@ void setup() {
   pinMode(M5_Limitsw1, INPUT_PULLDOWN);
   pinMode(M5_Limitsw2, INPUT_PULLDOWN);
   //Interrupt set
-  attachInterrupt(M5_Limitsw1,onRise1,RISING);
-  attachInterrupt(M5_Limitsw2,onRise2,RISING);
+  //attachInterrupt(M5_Limitsw1,onRise1,RISING);
+  //attachInterrupt(M5_Limitsw2,onRise2,RISING);
 
   //Set CAN
   init_can();
@@ -221,7 +222,7 @@ void setup() {
 
   if(OTA_flag == true){
     M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("Connecting 712 room");
+    M5.Lcd.printf("Conecting mobile router");
     WiFi.mode(WIFI_STA); 
     WiFi.begin(ssid1, pass1);
     while (WiFi.status() != WL_CONNECTED){
@@ -258,7 +259,7 @@ void setup() {
     }
     if (wifi_num == 3){
       M5.Lcd.setCursor(0,60);
-      M5.Lcd.printf("Conecting mobile router");
+      M5.Lcd.printf("Connecting 712 room");
       WiFi.mode(WIFI_STA);
       WiFi.begin(ssid3, pass3);
       while (WiFi.status() != WL_CONNECTED){
@@ -306,6 +307,15 @@ void setup() {
 }
 
 void loop() {
+//Limit switch
+  if (digitalRead(M5_Limitsw2) == 1){
+    mode_num = 10;
+  }
+  else if(sw_mode == 1){
+  }else if(digitalRead(M5_Limitsw1) == 1){
+    mode_num = 11;
+  }
+
 //Read Encoder value
   Wire.beginTransmission(ENCODER_ADDR);
   Wire.write(ENCODER_VALUE);
@@ -331,15 +341,17 @@ void loop() {
   case 11: //Limit Switch Up side (STOP --> DOWN) 11-->12
     ts_time = millis();
     mode_num = 12;
+    sw_mode = 1;
     M5.update();
     break;
 
   case 12: //Limit Switch Up side (STOP --> DOWN)
-    sendData_dji(-2000);
+    ts_time_ = millis() - ts_time;
+    sendData_dji(-4000);
     sendData_vesc(0,CAN_vesc_IDaddress_A);
     sendData_vesc(0,CAN_vesc_IDaddress_B);
     sendData_vesc(0,CAN_vesc_IDaddress_C);
-    if (millis() - ts_time > 5000){
+    if (ts_time_ > 5000){
       if(run_mode == 10){
         mode_num = 30;
       }else if(run_mode == 20){
@@ -348,19 +360,23 @@ void loop() {
     }
     break;
   
-  case 15: //Start RUN 15-->16-->25
+  case 15: //Start RUN 15-->16-->21(vertical) or 25(incline)
     ts_time = millis();
     mode_num = 16;
     break;
   
-  case 16: //Stop 5sec --> UP   16-->25
+  case 16: //Stop 5sec --> UP   16-->21(Vertical) or 25(Incline)
     sendData_dji(-2000);
     sendData_vesc(0,CAN_vesc_IDaddress_A);
     sendData_vesc(0,CAN_vesc_IDaddress_B);
     sendData_vesc(0,CAN_vesc_IDaddress_C);
     if(millis() - ts_time > 5000){
-      mode_num = 25;
-      set_position_ = set_position * 0.2;
+      if(run_mode == 10){
+        mode_num = 21;
+      }else if(run_mode == 20){
+        mode_num = 25;
+        set_position_ = set_position * 0.05;
+      }
     }
     break;
 
@@ -371,32 +387,64 @@ void loop() {
     sendData_vesc(-10000,CAN_vesc_IDaddress_C);
     break;
   
-  case 25: //UP Target 0-20% 25-->26
+  case 21: //UP Target(Vertical) 0-100% 21-->11
     sendData_dji(2000);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_A);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_B);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_C);
-    if(perimeter > set_position_){
-      mode_num = 26;
-      set_position_ = set_position * 0.8;
+    sendData_vesc(-20000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-20000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-20000,CAN_vesc_IDaddress_C);
+    if(perimeter > set_position){
+      mode_num = 11;
     }
     break;
   
-  case 26: //UP Target 20-80%  26-->27
+  case 25: //UP Target 0-5% 16-->25-->26-->27-->11
+    sendData_dji(2000);
+    sendData_vesc(-8000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-8000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-8000,CAN_vesc_IDaddress_C);
+    if(perimeter > set_position_){
+      mode_num = 26;
+      set_position_ = set_position * 0.1;
+    }
+    break;
+  
+  case 26: //UP Target 5-10%  26-->27
+    sendData_dji(2000);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_C);
+    if(perimeter > set_position_){
+      mode_num = 27;
+      set_position_ = set_position * 0.9;
+    }
+    break;
+  
+  case 27: //UP Target 10-90%  27-->28
+    sendData_dji(2000);
+    sendData_vesc(-100000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-100000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-100000,CAN_vesc_IDaddress_C);
+    if(perimeter > set_position_){
+      mode_num = 28;
+      set_position_ = set_position * 0.95;
+    }
+    break;
+  
+  case 28: //UP Target 90-95%  28-->29
+    sendData_dji(2000);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-30000,CAN_vesc_IDaddress_C);
+    if(perimeter > set_position_){
+      mode_num = 29;
+    }
+    break;
+
+  case 29: //UP Target 95-100%  29-->11
     sendData_dji(2000);
     sendData_vesc(-10000,CAN_vesc_IDaddress_A);
     sendData_vesc(-10000,CAN_vesc_IDaddress_B);
     sendData_vesc(-10000,CAN_vesc_IDaddress_C);
-    if(perimeter > set_position_){
-      mode_num = 27;
-    }
-    break;
-  
-  case 27: //UP Target 80-100%  27-->11
-    sendData_dji(2000);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_A);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_B);
-    sendData_vesc(-5000,CAN_vesc_IDaddress_C);
     if(perimeter > set_position){
       mode_num = 11;
     }
@@ -408,25 +456,26 @@ void loop() {
     break;
 
   case 31:
-    sendData_dji(-2000);
-    sendData_vesc(0,CAN_vesc_IDaddress_A);
-    sendData_vesc(0,CAN_vesc_IDaddress_B);
-    sendData_vesc(0,CAN_vesc_IDaddress_C);
-    if(ts_time - millis() > 10000){
+    ts_time_ = millis() - ts_time;
+    sendData_dji(-2500);
+    sendData_vesc(-5000,CAN_vesc_IDaddress_A);
+    sendData_vesc(-5000,CAN_vesc_IDaddress_B);
+    sendData_vesc(-5000,CAN_vesc_IDaddress_C);
+    if(ts_time_ > 4000){
       sendData_dji(2000);
       sendData_vesc(0,CAN_vesc_IDaddress_A);
       sendData_vesc(0,CAN_vesc_IDaddress_B);
       sendData_vesc(0,CAN_vesc_IDaddress_C);
-      if(ts_time - millis() > 10100){
-        ts_time = millis();
+      if(ts_time_ > 4300){
+        mode_num = 30;
       }
     }
     break;
   
-  case 35: //DOWN Target 100-10% and 10-0% (Incline) 35-->36-->37-->10
+  case 35: //DOWN Target (Incline) 35-->36-->37-->38-->10
     ts_time = millis();
     mode_num = 36;
-    set_position_ = set_position * 0.1;
+    set_position_ = set_position * 0.2;
     break;
   
   case 36: //DOWN Target 100-10%(Incline) 36-->37
@@ -436,10 +485,21 @@ void loop() {
     sendData_vesc(10000,CAN_vesc_IDaddress_C);
     if(perimeter < set_position_){
       mode_num = 37;
+      set_position_ = set_position * 0.05;
     }
     break;
   
-  case 37: //DOWN Target 10-0%(Incline) 37-->10
+  case 37: //DOWN Target 10-5%(Incline) 37-->38
+    sendData_dji(2000);
+    sendData_vesc(7500,CAN_vesc_IDaddress_A);
+    sendData_vesc(7500,CAN_vesc_IDaddress_B);
+    sendData_vesc(7500,CAN_vesc_IDaddress_C);
+    if(perimeter < set_position_){
+      mode_num = 38;
+    }
+    break;
+
+  case 38: //DOWN Target 5-0%(Incline) 38-->10
     sendData_dji(2000);
     sendData_vesc(5000,CAN_vesc_IDaddress_A);
     sendData_vesc(5000,CAN_vesc_IDaddress_B);
